@@ -1,0 +1,7 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Run Full Stack" type="CompoundRunConfigurationType">
+    <toRun name="Run" type="CargoCommandRunConfiguration" />
+    <toRun name="Python TCP Sever" type="ShConfigurationType" />
+    <method v="2" />
+  </configuration>
+</component>

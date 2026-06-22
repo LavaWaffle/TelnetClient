@@ -8,7 +8,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let server_addr = "127.0.0.1:2323";
     let mut stream = TcpStream::connect(server_addr)
         .await
-        .map_err(|e| format!("Failed to connect to {server_addr}, run 'nc -lkv 2323'. Err: {e}"))?;
+        .map_err(|e| format!("Failed to connect to {server_addr}, check 'unit_test.py'. Err: {e}"))?;
     println!("Connected to {server_addr}");
 
     let (mut socket_read, mut socket_write) = stream.split();
@@ -30,7 +30,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
                 // todo!(); // Implement telnet read
 
-                print!("Received {bytes_read} bytes: {:?}", &network_buffer[..]);
+                println!("Received {bytes_read} bytes: {:?}", &network_buffer[..]);
                 network_buffer.clear();
             }
 
