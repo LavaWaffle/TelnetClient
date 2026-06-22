@@ -3,6 +3,22 @@ use std::error::Error;
 use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
+pub mod TelnetConsts {
+    pub const IAC: u8 = 0xFF;
+    pub const DONT: u8 = 0xFE;
+    pub const DO: u8 = 0xFD;
+    pub const WONT: u8 = 0xFC;
+    pub const WILL: u8 = 0xFB;
+
+    pub const ECHO: u8 = 0x01;
+}
+
+enum TelnetState {
+    NormalText,
+    AwaitingCmd,
+    AwaitingOpt,
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let server_addr = "127.0.0.1:2323";
@@ -18,6 +34,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut stdin = io::stdin();
     let mut stdin_buffer = [0u8; 1024];
 
+    let mut state = TelnetState::NormalText;
+
     loop {
         tokio::select! {
             result = socket_read.read_buf(&mut network_buffer) => {
@@ -28,9 +46,47 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     break;
                 }
 
-                // todo!(); // Implement telnet read
+                for (idx, byte) in network_buffer.iter().enumerate() {
+                    if idx >= bytes_read {
+                        break;
+                    }
 
-                println!("Received {bytes_read} bytes: {:?}", &network_buffer[..]);
+                    match state {
+                        TelnetState::NormalText => {
+                            match *byte {
+                                TelnetConsts::IAC => {
+                                    state = TelnetState::AwaitingCmd;
+                                    println!("Recv 0xFF moving to Await Cmd State");
+                                }
+                                _ => {
+                                    print!("{}", *byte as char);
+                                }
+                            }
+                        }
+                        TelnetState::AwaitingCmd => {
+                            match *byte {
+                                TelnetConsts::DO => {
+                                    state = TelnetState::AwaitingOpt;
+                                    println!("Recv Cmd: 0xFD (DO) moving to Await Opt State");
+                                }
+                                _ => {
+                                    state = TelnetState::NormalText;
+                                    println!("Unrecognized command byte: {:02X}, returning to NormalText", byte);
+                                    state = TelnetState::NormalText;
+                                }
+                            }
+                        }
+                        TelnetState::AwaitingOpt => {
+                            if *byte == TelnetConsts::ECHO {
+                                state = TelnetState::NormalText;
+                                println!("Recv Opt: 0x01 (ECHO) moving to Normal Text State");
+                                socket_write.write_all(&[TelnetConsts::IAC, TelnetConsts::WILL, TelnetConsts::ECHO]).await?;
+                            }
+                        }
+                    }
+                }
+
+                println!("Received {bytes_read} bytes: {:02X?}", &network_buffer[..]);
                 network_buffer.clear();
             }
 
