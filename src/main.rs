@@ -19,7 +19,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut stdin_buffer = [0u8; 1024];
 
     loop {
-        tokio::select! {`
+        tokio::select! {
             result = socket_read.read_buf(&mut network_buffer) => {
                 let bytes_read = result?;
 
