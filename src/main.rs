@@ -5,7 +5,7 @@ use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use std::io::Write;
 
-pub mod TelnetConsts {
+pub mod telnet_consts {
     pub const IAC: u8 = 0xFF;
     pub const DONT: u8 = 0xFE;
     pub const DO: u8 = 0xFD;
@@ -102,7 +102,7 @@ impl TelnetParser {
         for &byte in data {
             match self.state {
                 TelnetState::AwaitingIAC => {
-                    if byte == TelnetConsts::IAC {
+                    if byte == telnet_consts::IAC {
                         self.state = TelnetState::AwaitingCmd;
                     } else {
                         self.text_buffer.push(byte);
@@ -111,12 +111,12 @@ impl TelnetParser {
 
                 TelnetState::AwaitingCmd => {
                     match byte {
-                        TelnetConsts::DO | TelnetConsts::DONT |
-                        TelnetConsts::WILL | TelnetConsts::WONT => {
+                        telnet_consts::DO | telnet_consts::DONT |
+                        telnet_consts::WILL | telnet_consts::WONT => {
                             self.push_text_buffer(&mut events);
                             self.state = TelnetState::AwaitingOpt(byte);
                         }
-                        TelnetConsts::IAC => {
+                        telnet_consts::IAC => {
                             // 0xff 0xff -> 0xff into char stream
                             self.text_buffer.push(byte);
                             self.state = TelnetState::AwaitingIAC;
@@ -176,7 +176,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 println!("Received {bytes_read} bytes: {:02X?}", &network_buffer[..]);
                 let events = tel_parser.parse_bytes(&network_buffer[..bytes_read]);
                 println!("Formatted into {events:?}");
-                
+
                 for event in events {
                     match event {
                         TelnetEvent::Text(bytes) => {
@@ -189,18 +189,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
                             }
                         }
                         TelnetEvent::Command(cmd, opt) => {
-                            if cmd == TelnetConsts::DO {
+                            if cmd == telnet_consts::DO {
                                 tel_cli.set_remote(opt, NegState::WantYes);
 
-                                if opt == TelnetConsts::ECHO && !tel_cli.is_local(TelnetConsts::ECHO, NegState::Yes){
-                                    tel_cli.set_local(TelnetConsts::ECHO, NegState::Yes);
-                                    socket_write.write_all(&[TelnetConsts::IAC, TelnetConsts::WILL, opt]).await?;
+                                if opt == telnet_consts::ECHO && !tel_cli.is_local(telnet_consts::ECHO, NegState::Yes){
+                                    tel_cli.set_local(telnet_consts::ECHO, NegState::Yes);
+                                    socket_write.write_all(&[telnet_consts::IAC, telnet_consts::WILL, opt]).await?;
                                 }
-                            } else if cmd == TelnetConsts::DONT {
+                            } else if cmd == telnet_consts::DONT {
                                 tel_cli.set_remote(opt, NegState::WantNo);
-                            } else if cmd == TelnetConsts::WILL {
+                            } else if cmd == telnet_consts::WILL {
                                 tel_cli.set_remote(opt, NegState::Yes);
-                            } else if cmd == TelnetConsts::WONT {
+                            } else if cmd == telnet_consts::WONT {
                                 tel_cli.set_remote(opt, NegState::No);
                             }
                         }
